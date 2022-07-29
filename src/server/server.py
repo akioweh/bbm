@@ -7,6 +7,7 @@ from .client import Client
 
 
 class Server:
+    """main server class"""
     def __init__(self, host: str = 'localhost', port: int = 6969):
         self.addr = (host, port)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -25,10 +26,15 @@ class Server:
         self.clients: list[Client] = []
 
     def broadcast(self, msg):
+        """send message to all connected clients"""
         for client in self.clients:
             client.send(msg)
 
     def client_handle_loop(self, client: Client):
+        """runs threaded \n
+        handles incoming traffic from a client
+        and sends outbound traffic if necessary
+        """
         try:
             while True:
                 data = client.recv(1024)
@@ -58,6 +64,9 @@ class Server:
         client.close()
 
     def accept_loop(self):
+        """runs threaded \n
+        handles incoming connections
+        """
         try:
             while True:
                 client_socket, addr = self.socket.accept()
@@ -75,6 +84,12 @@ class Server:
                 raise e
 
     def run(self):
+        """
+        starts server socket and readily accepts and handles client connections \n
+        each client connection is handled in a separate thread
+
+        close server with keyboard interrupt or EOF
+        """
         print(f'Server started with port [{self.addr[1]}]')
         thread = threading.Thread(target=self.accept_loop)
         thread.daemon = True
@@ -83,11 +98,14 @@ class Server:
             while thread.is_alive():
                 time.sleep(1)
 
-        except KeyboardInterrupt:
-            print('Closing server')
-            with suppress(OSError):
-                self.socket.shutdown(socket.SHUT_RDWR)
-            for client in self.clients:
-                client.shut_close()
-            self.socket.close()
+        except (KeyboardInterrupt, EOFError):
+            pass
+        # Extremely cursed shutdown that kinda works but i have no idea how to fix some of the problems that only
+        # sometimes arise... whatever jut imagine it works perfectly
+        print('Closing server')
+        with suppress(OSError):
+            self.socket.shutdown(socket.SHUT_RDWR)
+        for client in self.clients:
+            client.shut_close()
+        self.socket.close()
         print('Server closed')

@@ -4,11 +4,13 @@ import threading
 
 
 class Client:
+    """main client class"""
     def __init__(self, host: str = 'localhost', port: int = 6969):
         self.addr = (host, port)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def connect(self):
+        """connects to server at self.addr"""
         try:
             self.socket.connect(self.addr)
             print(f'Connected to {self.addr}')
@@ -20,14 +22,19 @@ class Client:
             exit(1)
 
     def send(self, data: str | bytes):
+        """socket.send() wrapper that also accepts str"""
         if isinstance(data, str):
             data: bytes = data.encode('utf-8')
         self.socket.send(data)
 
     def recv(self, size: int) -> str:
+        """socket.recv() wrapper that decodes to str"""
         return self.socket.recv(size).decode('utf-8')
 
     def inbound_loop(self):
+        """runs threaded \n
+        handles incoming traffic from server
+        and sends reply traffic if necessary"""
         try:
             while True:
                 data = self.recv(1024)
@@ -51,6 +58,9 @@ class Client:
                 raise e
 
     def outbound_loop(self):
+        """runs threaded \n
+        sends outbound messages to server \n
+        takes input from stdin as user messages"""
         try:
             while True:
                 data = input()
@@ -84,6 +94,7 @@ class Client:
             pass
 
     def run(self):
+        """"""
         print(f'Connecting to {self.addr}')
         inbound = threading.Thread(target=self.inbound_loop)
         inbound.daemon = True
@@ -98,6 +109,8 @@ class Client:
 
         except (KeyboardInterrupt, EOFError):
             print('Received closing signal from watcher thread')
+        # Extremely cursed shutdown that kinda works but i have no idea how to fix some of the problems that only
+        # sometimes arise... whatever jut imagine it works perfectly
         print('Shutting down')
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
